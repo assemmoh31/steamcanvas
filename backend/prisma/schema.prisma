@@ -1,0 +1,69 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id            String    @id @default(uuid())
+  steamId       String    @unique
+  displayName   String
+  avatarUrl     String?
+  walletBalance Float     @default(0.0)
+  artistLevel   Int       @default(1)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  artworks      Artwork[]
+  purchases     Purchase[]
+  boughtTx      Transaction[] @relation("BuyerTransactions")
+  soldTx        Transaction[] @relation("ArtistTransactions")
+}
+
+model Purchase {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  artworkId   String
+  artwork     Artwork  @relation(fields: [artworkId], references: [id])
+  purchasedAt DateTime @default(now())
+  pricePaid   Float    @default(0.0)
+}
+
+model Artwork {
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  imageUrl    String
+  r2Key       String
+  fileType    String   @default("image/gif")
+  fileSize    Int
+  price       Float    @default(0.0)
+  downloadPath String? // Secured file path for purchasers
+  isVerified  Boolean  @default(false)
+  status      String   @default("PENDING") // "PENDING", "APPROVED", "REJECTED"
+  artistId    String
+  artist      User     @relation(fields: [artistId], references: [id])
+  purchasedBy Purchase[]
+  transactions Transaction[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Transaction {
+  id          String   @id @default(uuid())
+  amount      Float
+  type        String   // "PURCHASE", "ADMIN_GRANT", "DEPOSIT"
+  status      String   @default("COMPLETED") // "COMPLETED", "PENDING", "FAILED"
+
+  buyerId     String?
+  buyer       User?    @relation("BuyerTransactions", fields: [buyerId], references: [id])
+  artistId    String?
+  artist      User?    @relation("ArtistTransactions", fields: [artistId], references: [id])
+  artworkId   String?
+  artwork     Artwork? @relation(fields: [artworkId], references: [id])
+  createdAt   DateTime @default(now())
+}
