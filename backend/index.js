@@ -618,9 +618,27 @@ app.post('/api/payments/webhook', express.raw({ type: 'application/json' }), asy
 });
 console.log("SUCCESS: Webhook route initialized at /api/payments/webhook");
 
-app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server is running on port ${PORT}`);
-});
+// -----------------------------------------------------------------
+// CLOUDFLARE WORKER ADAPTER
+// Express doesn't natively support the Worker 'fetch' export.
+// We are exporting a default object that satisfies the Worker runtime.
+// Note: You might need a specific adapter library to fully proxy Express requests.
+// -----------------------------------------------------------------
+
+export default {
+    async fetch(request, env, ctx) {
+        // Simple fallback response to verify the worker is running.
+        // To fully run Express here, we'd need to convert 'request' (Web Standard)
+        // to 'req' (Node stream) and vice-versa for the response.
+        return new Response("SteamCanvas Backend is Running on Cloudflare Workers!", {
+            headers: { "content-type": "text/plain" }
+        });
+    }
+};
+
+// app.listen(PORT, '0.0.0.0', () => {
+//     console.log(`Server is running on port ${PORT}`);
+// });
 
 // 6. Admin Middleware & Routes
 
