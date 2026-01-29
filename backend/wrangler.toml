@@ -1,0 +1,12 @@
+name = "steamcanvas-backend"
+main = "index.js"
+compatibility_date = "2024-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+# Add non-secret environment variables here if needed
+
+# Bindings for R2 Bucket
+[[r2_buckets]]
+binding = "BUCKET"
+bucket_name = "steamcanvas-assets"
