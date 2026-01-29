@@ -1,9 +1,9 @@
-const passport = require('passport');
-const SteamStrategy = require('passport-steam').Strategy;
-// const { PrismaClient } = require('@prisma/client'); // Removed
-require('dotenv').config();
+import passport from 'passport';
+import { Strategy as SteamStrategy } from 'passport-steam';
+import dotenv from 'dotenv';
+dotenv.config();
 
-const { prisma } = require('./db');
+import { getPrisma } from './db.js';
 
 passport.serializeUser((user, done) => {
     done(null, user.id);
@@ -11,6 +11,7 @@ passport.serializeUser((user, done) => {
 
 passport.deserializeUser(async (id, done) => {
     try {
+        const prisma = getPrisma();
         const user = await prisma.user.findUnique({ where: { id } });
         done(null, user);
     } catch (error) {
@@ -26,12 +27,11 @@ passport.use(new SteamStrategy({
 },
     async (identifier, profile, done) => {
         try {
-            // Profile.id is the steam64id
+            const prisma = getPrisma();
             const steamId = profile.id;
             const displayName = profile.displayName;
-            const avatarUrl = profile.photos?.[2]?.value || profile.photos?.[0]?.value; // Large or small avatar
+            const avatarUrl = profile.photos?.[2]?.value || profile.photos?.[0]?.value;
 
-            // Upsert user: Update if exists, Create if new
             const user = await prisma.user.upsert({
                 where: { steamId },
                 update: {
@@ -55,4 +55,4 @@ passport.use(new SteamStrategy({
     }
 ));
 
-module.exports = passport;
+export default passport;

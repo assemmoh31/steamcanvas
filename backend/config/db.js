@@ -1,26 +1,42 @@
-const { PrismaClient } = require('@prisma/client');
+import { PrismaClient } from '@prisma/client';
 
-const prisma = new PrismaClient({
-    log: ['query', 'info', 'warn', 'error'],
-});
+let prisma;
 
-async function connectWithRetry(retries = 5, delay = 2000) {
-    for (let i = 0; i < retries; i++) {
-        try {
-            await prisma.$connect();
-            console.log('✅ Database connected successfully');
-            return;
-        } catch (error) {
-            console.error(`❌ Database connection failed (Attempt ${i + 1}/${retries}):`, error.message);
-            if (i < retries - 1) {
-                console.log(`Retrying in ${delay / 1000} seconds...`);
-                await new Promise(res => setTimeout(res, delay));
-            } else {
-                console.error('🔥 Critical: Could not connect to database after multiple attempts.');
-                process.exit(1);
-            }
-        }
+const initPrisma = (env) => {
+    if (!prisma) {
+        // Use env.DATABASE_URL from Cloudflare OR process.env for local
+        const url = env?.DATABASE_URL || process.env.DATABASE_URL;
+
+        console.log("Initializing Prisma with URL:", url ? "FOUND" : "MISSING");
+
+        prisma = new PrismaClient({
+            datasources: {
+                db: {
+                    url: url
+                }
+            },
+            log: ['query', 'info', 'warn', 'error'],
+        });
     }
-}
+    return prisma;
+};
 
-module.exports = { prisma, connectWithRetry };
+// For existing non-Cloudflare usage, we can export a default instance if possible, 
+// but in Workers, we rely on initPrisma(env).
+// We'll export a getter or just the init function.
+
+export { initPrisma };
+
+// Polyfill for legacy calls in passport etc.
+// Note: This 'prisma' export will only work if initialized.
+// For files importing 'prisma' directly, they might fail if called before init.
+// We might need to refactor consumers to call getPrisma().
+
+export const getPrisma = () => {
+    if (!prisma) {
+        // Fallback for local testing if env wasn't passed yet
+        if (process.env.DATABASE_URL) return initPrisma(process.env);
+        throw new Error("Prisma not initialized! Call initPrisma(env) first.");
+    }
+    return prisma;
+};
